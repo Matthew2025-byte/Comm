@@ -12,10 +12,6 @@
 
 
 # Development Overview
-## Libraries
-- argparse
-- socket
-
 ## TODO:
 - Direct message via TCP
 - Voice via UDP
