@@ -30,7 +30,7 @@ def ipv4_or_localhost(value):
         raise argparse.ArgumentError("Host must be a valid IPv4 address")
     
     return (str(ip), port)
-
+            
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('address', type=ipv4_or_localhost)
