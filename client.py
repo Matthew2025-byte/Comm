@@ -86,6 +86,15 @@ try:
                 cursor_x = max(0, cursor_x - 1)
             elif key == curses.KEY_RIGHT:
                 cursor_x = min(len(input_buffer), cursor_x + 1)
+            # handle resizing
+            elif key == curses.KEY_RESIZE:
+                height, width = stdscr.getmaxyx()
+
+                msg_win.resize(height - 3, width)
+                msg_win.mvwin(0, 0)
+                
+                input_win.resize(3, width)
+                input_win.mvwin(height - 3, 0)
             else:  # Log unhandled keys
                 msg_win.clear()
                 msg_win.addstr(f"Unknown key: {key}\n")
