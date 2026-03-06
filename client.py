@@ -43,30 +43,57 @@ args = parser.parse_args()
 
 try:
     stdscr = curses.initscr()
-    stdscr.nodelay(True)
-    stdscr.keypad(True)
+    curses.echo(False)
     height, width = stdscr.getmaxyx()
 
-    msgHistory_win = curses.newwin(height - 3, width, 0, 0)
+    msg_win = curses.newwin(height - 3, width, 0, 0)
+    
+
     input_win = curses.newwin(3, width, height - 3, 0)
+    input_win.keypad(True)
+    input_win.nodelay(True)  # Make getch non-blocking
+    input_buffer = ""
+    cursor_x = 0
 
     while True:
-        key = stdscr.getch()
-        if key != -1:
-            # display the size of the terminal (debug purposes)
-            if key == curses.KEY_RESIZE:
-                height, width = stdscr.getmaxyx()
+        input_win.erase()
+        input_win.box()
+        input_win.addstr(1, 1, "> " + input_buffer)
 
-                msgHistory_win.resize(height - 3, width)
-                msgHistory_win.mvwin(0, 0)
-                input_win.resize(3, width)
-                input_win.mvwin(height - 3, 0)
+        curses.curs_set(1)
+        input_win.move(1, 3 + cursor_x)
+        input_win.refresh()
 
-                msgHistory_win.clear()
-                msgHistory_win.addstr(0, 0, f"{width}x{height}")
-                msgHistory_win.refresh()
-            if key == ord('q'):
+
+        key = input_win.getch()
+        if key != -1: # Check if a key was pressed
+            if key == 24: # Ctrl-X to exit
                 break
+            if key == curses.KEY_BACKSPACE or key == 8 or key == 127:
+                input_buffer = input_buffer[:-1]
+                cursor_x = max(0, cursor_x - 1)
+            # send message
+            elif key == curses.KEY_ENTER or key == 10:
+                #sock.sendall(input_buffer.encode())
+                input_buffer = ""
+                cursor_x = 0
+            # Add letters to input buffer
+            elif key >= 32 and key <= 126:
+                input_buffer += chr(key)
+                cursor_x += 1
+            # Move cursor within input buffer
+            elif key == curses.KEY_LEFT:
+                cursor_x = max(0, cursor_x - 1)
+            elif key == curses.KEY_RIGHT:
+                cursor_x = min(len(input_buffer), cursor_x + 1)
+            else:  # Log unhandled keys
+                msg_win.clear()
+                msg_win.addstr(f"Unknown key: {key}\n")
+                msg_win.refresh()
+        
+        
+        
+        
 finally:
     stdscr.keypad(False)
     curses.endwin()
