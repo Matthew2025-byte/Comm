@@ -40,7 +40,7 @@ args = parser.parse_args()
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(args.address)
 
-
+client.sendall(input("message: ").encode())
 data = client.recv(1024)
 print(data.decode())
 client.close()

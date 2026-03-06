@@ -1,27 +1,40 @@
-import argparse, socket, sys
+import argparse
+import select, socket
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 parser = argparse.ArgumentParser(description='Socket Server')
 parser.add_argument('port', type=int, help='port number')
 parser.add_argument('--public', action='store_true', help='public server')
-
 args = parser.parse_args()
 
+
+# Create a socket object
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 if args.public:
     server.bind(('0.0.0.0', args.port))
 else:
     server.bind(('localhost', args.port))
+server.listen()
+server.setblocking(False)
 
-server.listen(10)
+connections = [server]
 
-try:
-    while True:
-        conn, addr = server.accept()
-        conn.sendall('Hello, world!'.encode())
-        conn.close()
+while True:
+    readable, _, _ = select.select(connections, [], [])
 
-
-except KeyboardInterrupt:
-    sys.exit()
+    for sock in readable:
+        if sock is server:
+            conn, addr = server.accept()
+            print(f"{addr} connected")
+            connections.append(conn)
+        else:
+            data = sock.recv(1024)
+            if not data:
+                print("client disconnected")
+                connections.remove(sock)
+                sock.close()
+                continue
+            print(data.decode())
+            for client in connections:
+                if client not in (server, sock):
+                    client.sendall(data)
