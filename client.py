@@ -1,6 +1,9 @@
-import argparse, socket, ipaddress
+import argparse, socket, ipaddress, threading
 
-
+def input_thread(sock):
+    while True:
+        msg = input("message: ")
+        sock.sendall(msg.encode())
 
 def ipv4_or_localhost(value):
     """Validates that the address given by the user is a valid IPv4 address"""
@@ -37,10 +40,11 @@ parser.add_argument('address', type=ipv4_or_localhost)
 
 args = parser.parse_args()
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(args.address)
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect(args.address)
 
-client.sendall(input("message: ").encode())
-data = client.recv(1024)
-print(data.decode())
-client.close()
+threading.Thread(target=input_thread, args=(sock,), daemon=True).start()
+
+while True:
+    data = sock.recv(1024)
+    print("Recieved: ", data.decode())
