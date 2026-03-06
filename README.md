@@ -20,3 +20,6 @@
 
 ### Eventual goals
 - Client desktop app
+
+## Known bugs
+- Client crashes when input buffer is longer than the width of the terminal

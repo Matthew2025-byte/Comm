@@ -30,16 +30,30 @@ def ipv4_or_localhost(value):
         raise argparse.ArgumentError("Host must be a valid IPv4 address")
     
     return (str(ip), port)
+def get_message(sock):
+    try:
+        data = sock.recv(1024)
+        if not data:
+            return None
+        return data.decode()
+    except BlockingIOError:
+        return None
+def send_message(sock, message):
+    try:
+        sock.sendall(message.encode())
+        return True
+    except (ConnectionAbortedError, ConnectionError):
+        return False
 
-      
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('address', type=ipv4_or_localhost)
 
 args = parser.parse_args()
 
-#sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#sock.connect(args.address)
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect(args.address)
+sock.setblocking(False)
 
 try:
     stdscr = curses.initscr()
@@ -48,7 +62,7 @@ try:
     height, width = stdscr.getmaxyx()
 
     msg_win = curses.newwin(height - 3, width, 0, 0)
-    msg_history = []
+    msg_history = [f"Connected to {args.address[0]}:{args.address[1]}"]
     
 
     input_win = curses.newwin(3, width, height - 3, 0)
@@ -60,6 +74,9 @@ try:
     while True:
         # Update message history window
         msg_win.erase()
+        new_msg = get_message(sock)
+        if new_msg is not None:
+            msg_history.append(new_msg)
         for i, msg in enumerate(msg_history):
             msg_win.addstr(1 + i, 1, msg + "\n")
         msg_win.box()
@@ -83,7 +100,8 @@ try:
                 cursor_x = max(0, cursor_x - 1)
             # send message
             elif key == curses.KEY_ENTER or key == 10:
-                #sock.sendall(input_buffer.encode())
+                if not send_message(sock, input_buffer):
+                    msg_history.append("Connection lost")
                 msg_history.append(input_buffer)
                 input_buffer = ""
                 cursor_x = 0
