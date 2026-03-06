@@ -28,13 +28,19 @@ while True:
             print(f"{addr} connected")
             connections.append(conn)
         else:
-            data = sock.recv(1024)
-            if not data:
+            try:
+                data = sock.recv(1024)
+                if not data:
+                    print("client disconnected")
+                    connections.remove(sock)
+                    sock.close()
+                    continue
+                print(data.decode())
+                for client in connections:
+                    if client not in (server, sock):
+                        client.sendall(data)
+            except ConnectionResetError:
                 print("client disconnected")
                 connections.remove(sock)
                 sock.close()
                 continue
-            print(data.decode())
-            for client in connections:
-                if client not in (server, sock):
-                    client.sendall(data)
