@@ -15,6 +15,7 @@ if args.public:
 else:
     server.bind(('localhost', args.port))
 server.listen()
+print(f"Server listening on port {args.port} {'(public)' if args.public else '(localhost)'}")
 server.setblocking(False)
 
 connections = [server]

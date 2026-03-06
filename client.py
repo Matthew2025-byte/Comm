@@ -62,7 +62,7 @@ try:
     height, width = stdscr.getmaxyx()
 
     msg_win = curses.newwin(height - 3, width, 0, 0)
-    msg_history = [f"Connected to {args.address[0]}:{args.address[1]}"]
+    msg_history = [f"Connected to {args.address[0]}:{args.address[1]}", "Press Ctrl-X to exit"]
     
 
     input_win = curses.newwin(3, width, height - 3, 0)
