@@ -44,9 +44,11 @@ args = parser.parse_args()
 try:
     stdscr = curses.initscr()
     curses.echo(False)
+    curses.curs_set(1)
     height, width = stdscr.getmaxyx()
 
     msg_win = curses.newwin(height - 3, width, 0, 0)
+    msg_history = []
     
 
     input_win = curses.newwin(3, width, height - 3, 0)
@@ -56,14 +58,21 @@ try:
     cursor_x = 0
 
     while True:
+        # Update message history window
+        msg_win.erase()
+        for i, msg in enumerate(msg_history):
+            msg_win.addstr(1 + i, 1, msg + "\n")
+        msg_win.box()
+        msg_win.noutrefresh()
+
+        # Update input window
         input_win.erase()
         input_win.box()
         input_win.addstr(1, 1, "> " + input_buffer)
-
-        curses.curs_set(1)
         input_win.move(1, 3 + cursor_x)
-        input_win.refresh()
-
+        input_win.noutrefresh()
+        curses.doupdate()
+        
 
         key = input_win.getch()
         if key != -1: # Check if a key was pressed
@@ -75,6 +84,7 @@ try:
             # send message
             elif key == curses.KEY_ENTER or key == 10:
                 #sock.sendall(input_buffer.encode())
+                msg_history.append(input_buffer)
                 input_buffer = ""
                 cursor_x = 0
             # Add letters to input buffer
@@ -99,10 +109,7 @@ try:
                 msg_win.clear()
                 msg_win.addstr(f"Unknown key: {key}\n")
                 msg_win.refresh()
-        
-        
-        
-        
+          
 finally:
     stdscr.keypad(False)
     curses.endwin()
