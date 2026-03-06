@@ -47,4 +47,4 @@ threading.Thread(target=input_thread, args=(sock,), daemon=True).start()
 
 while True:
     data = sock.recv(1024)
-    print("Recieved: ", data.decode())
+    print(f"\rRecieved: {data}\nmessage: ", end="")
