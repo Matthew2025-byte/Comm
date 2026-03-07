@@ -1,3 +1,4 @@
+from email.mime import message
 import argparse, socket, ipaddress, json
 from curses import wrapper
 import curses
@@ -39,14 +40,21 @@ def get_message(sock):
         data = sock.recv(1024)
         if not data:
             return None
-        message = json.loads(data.decode())
-        append_chat(message["user"], message["content"])
+        buffer = data.decode()
+        for msg in buffer.split("\r\n\r\n"):
+            try:
+                message = json.loads(msg)
+                append_chat(message["user"], message["content"])
+            except json.JSONDecodeError:
+                print(f"Failed to decode message: {msg}")
+
+
     except BlockingIOError:
         return None
 def send_message(sock, message):
     global USERNAME
     try:
-        sock.sendall(json.dumps({"user": USERNAME, "type": "message", "content": message}).encode())
+        sock.sendall(json.dumps({"type": "message", "user": USERNAME, "content": message}).encode())
         return True
     except (ConnectionAbortedError, ConnectionError):
         return False
@@ -123,7 +131,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.connect(args.address)
 sock.setblocking(False)
 
-
+sock.sendall(json.dumps({"type": "system", "request": "auth", "user": USERNAME, "pass": ""}).encode())
 
 
 

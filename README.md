@@ -21,14 +21,35 @@
 ### Eventual goals
 - Client desktop app
 
+## Known bugs
+- Client crashes when displaying more messages than space on the screen
 
+# API
+## Server
 
-## API
+### Authenticate
+```json
+{
+    "type": "system",
+    "request": "auth",
+    "user": "username",
+    "pass": "password"
+}
+```
 ### Send message
 ```json
 {
     "type": "message",
     "user": "username",
-    "value": ""
+    "content": ""
 }
 ```
+### Get message history
+```json
+{
+    "type": "system",
+    "request": "get-history"
+}
+```
+
+## Client
