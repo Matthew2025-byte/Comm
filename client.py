@@ -45,6 +45,55 @@ def send_message(sock, message):
     except (ConnectionAbortedError, ConnectionError):
         return False
 
+def draw_message_history(history, win: curses.window, w:int, h:int):
+    win.erase()
+    for i, msg in enumerate(history):
+        win.addstr(1 + i, 1, msg + "\n")
+    
+    # Top border
+    win.hline(0, 0, curses.ACS_HLINE, w)
+
+    # Left + right borders
+    win.vline(0, 0, curses.ACS_VLINE, h)
+    win.vline(0, w-1, curses.ACS_VLINE, h)
+
+    # Corners
+    win.addch(0, 0, curses.ACS_ULCORNER)
+    win.addch(0, w-1, curses.ACS_URCORNER)
+    win.noutrefresh()
+
+
+def draw_input_window(input_buffer, cursor_x, win:curses.window, w:int, h:int):
+    max_text_width = w - 4
+    win.erase()
+    win.addstr(1, 1, "> " + input_buffer[:max_text_width])
+    cursor_x = min(cursor_x, max_text_width)
+    
+
+    # Top border
+    win.hline(0, 0, curses.ACS_HLINE, w)
+    # Bottom border
+    win.hline(h-1, 0, curses.ACS_HLINE, w)
+
+    # Left border
+    win.vline(0, 0, curses.ACS_VLINE, h)
+    # Right border
+    win.vline(0, w-1, curses.ACS_VLINE, h)
+
+    # Top left corner
+    win.addch(0, 0, curses.ACS_LTEE)
+    # Top right corner
+    win.addch(0, w-1, curses.ACS_RTEE)
+
+    # Bottom corners
+    win.addch(h-1, 0, curses.ACS_LLCORNER)
+    win.insch(h-1, w-1, curses.ACS_LRCORNER)
+
+    win.move(1, cursor_x + 3)  # Move cursor to the correct position
+    win.noutrefresh()
+
+
+
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('address', type=ipv4_or_localhost)
@@ -54,6 +103,10 @@ args = parser.parse_args()
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.connect(args.address)
 sock.setblocking(False)
+
+
+
+
 
 try:
     stdscr = curses.initscr()
@@ -72,24 +125,15 @@ try:
     cursor_x = 0
 
     while True:
-        # Update message history window
-        msg_win.erase()
+        # Get new messages from the server
         new_msg = get_message(sock)
         if new_msg is not None:
             msg_history.append(new_msg)
-        for i, msg in enumerate(msg_history):
-            msg_win.addstr(1 + i, 1, msg + "\n")
-        msg_win.box()
-        msg_win.noutrefresh()
-
-        # Update input window
-        input_win.erase()
-        input_win.box()
-        input_win.addstr(1, 1, "> " + input_buffer)
-        input_win.move(1, 3 + cursor_x)
-        input_win.noutrefresh()
+        # Redraw the windows
+        draw_message_history(msg_history, msg_win, width, height - 3)
+        draw_input_window(input_buffer, cursor_x, input_win, width, 3)
         curses.doupdate()
-        
+
 
         key = input_win.getch()
         if key != -1: # Check if a key was pressed
@@ -107,8 +151,9 @@ try:
                 cursor_x = 0
             # Add letters to input buffer
             elif key >= 32 and key <= 126:
-                input_buffer += chr(key)
-                cursor_x += 1
+                if len(input_buffer) < width - 4:
+                    input_buffer += chr(key)
+                    cursor_x += 1
             # Move cursor within input buffer
             elif key == curses.KEY_LEFT:
                 cursor_x = max(0, cursor_x - 1)
