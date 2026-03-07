@@ -1,4 +1,4 @@
-import argparse, socket, ipaddress
+import argparse, socket, ipaddress, json
 from curses import wrapper
 import curses
 
@@ -30,25 +30,36 @@ def ipv4_or_localhost(value):
         raise argparse.ArgumentError("Host must be a valid IPv4 address")
     
     return (str(ip), port)
+
+def append_chat(user, message):
+    global msg_history
+    msg_history.insert(0, {"user": user, "content": message})
 def get_message(sock):
     try:
         data = sock.recv(1024)
         if not data:
             return None
-        return data.decode()
+        message = json.loads(data.decode())
+        append_chat(message["user"], message["content"])
     except BlockingIOError:
         return None
 def send_message(sock, message):
+    global USERNAME
     try:
-        sock.sendall(message.encode())
+        sock.sendall(json.dumps({"user": USERNAME, "type": "message", "content": message}).encode())
         return True
     except (ConnectionAbortedError, ConnectionError):
         return False
 
 def draw_message_history(history, win: curses.window, w:int, h:int):
-    win.erase()
+    win.clear()
+    v_offset = h - len(history)
     for i, msg in enumerate(history):
-        win.addstr(1 + i, 1, msg + "\n")
+        user = msg["user"]
+        if user == USERNAME:
+            offset = w - len(msg["content"]) - 4
+            win.addstr(v_offset - i, offset, msg['content'])
+        else: win.addstr(v_offset - i, 1, f"{user}: {msg['content']}")
     
     # Top border
     win.hline(0, 0, curses.ACS_HLINE, w)
@@ -61,8 +72,6 @@ def draw_message_history(history, win: curses.window, w:int, h:int):
     win.addch(0, 0, curses.ACS_ULCORNER)
     win.addch(0, w-1, curses.ACS_URCORNER)
     win.noutrefresh()
-
-
 def draw_input_window(input_buffer, cursor_x, win:curses.window, w:int, h:int):
     max_text_width = w - 4
     win.erase()
@@ -97,8 +106,11 @@ def draw_input_window(input_buffer, cursor_x, win:curses.window, w:int, h:int):
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('address', type=ipv4_or_localhost)
+parser.add_argument('--username', '-u', type=str, default="Anonymous", help='Username to use when connecting to the server')
 
 args = parser.parse_args()
+
+USERNAME = args.username
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.connect(args.address)
@@ -110,14 +122,17 @@ sock.setblocking(False)
 
 try:
     stdscr = curses.initscr()
+    curses.start_color()
     curses.echo(False)
     curses.curs_set(1)
     height, width = stdscr.getmaxyx()
 
-    msg_win = curses.newwin(height - 3, width, 0, 0)
-    msg_history = [f"Connected to {args.address[0]}:{args.address[1]}", "Press Ctrl-X to exit"]
     
+    msg_history:list[dict] = []
+    append_chat("System", f"Connected to {args.address[0]}:{args.address[1]}")
+    append_chat("System", "Press Ctrl-X to exit")
 
+    msg_win = curses.newwin(height - 3, width, 0, 0)
     input_win = curses.newwin(3, width, height - 3, 0)
     input_win.keypad(True)
     input_win.nodelay(True)  # Make getch non-blocking
@@ -145,8 +160,8 @@ try:
             # send message
             elif key == curses.KEY_ENTER or key == 10:
                 if not send_message(sock, input_buffer):
-                    msg_history.append("Connection lost")
-                msg_history.append(input_buffer)
+                    append_chat("System", "Failed to send message")
+                append_chat(USERNAME, input_buffer)
                 input_buffer = ""
                 cursor_x = 0
             # Add letters to input buffer

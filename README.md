@@ -20,3 +20,15 @@
 
 ### Eventual goals
 - Client desktop app
+
+
+
+## API
+### Send message
+```json
+{
+    "type": "message",
+    "user": "username",
+    "value": ""
+}
+```
