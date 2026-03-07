@@ -55,11 +55,18 @@ def draw_message_history(history, win: curses.window, w:int, h:int):
     win.clear()
     v_offset = h - len(history)
     for i, msg in enumerate(history):
-        user = msg["user"]
+        user:str = msg["user"]
+        content:str = msg["content"]
         if user == USERNAME:
-            offset = w - len(msg["content"]) - 4
+            offset = w - len(content) - 4
             win.addstr(v_offset - i, offset, msg['content'])
-        else: win.addstr(v_offset - i, 1, f"{user}: {msg['content']}")
+        else:
+            message_offset = len(user) + 1
+            if user.lower() == "system":
+                win.addstr(v_offset - i, 1, user, curses.color_pair(1))
+            else:
+                win.addstr(v_offset - i, 1, user, curses.color_pair(2))
+            win.addstr(v_offset - i, message_offset, ": "+ content)
     
     # Top border
     win.hline(0, 0, curses.ACS_HLINE, w)
@@ -126,6 +133,14 @@ try:
     curses.echo(False)
     curses.curs_set(1)
     height, width = stdscr.getmaxyx()
+
+    # Gold on black for system messages
+    curses.init_color(1, 1000, 860, 0)
+    curses.init_pair(1, 1, curses.COLOR_BLACK)
+
+    # Blue on black for user messages
+    curses.init_color(2, 548, 828, 960)
+    curses.init_pair(2, 2, curses.COLOR_BLACK)
 
     
     msg_history:list[dict] = []
